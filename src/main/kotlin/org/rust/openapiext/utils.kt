@@ -49,7 +49,6 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.util.CachedValueImpl
 import org.jdom.Element
 import org.jdom.input.SAXBuilder
-import org.rust.cargo.RustfmtWatcher
 import org.rust.ide.annotator.RsExternalLinterPass
 import java.lang.reflect.Field
 import java.nio.file.Path
@@ -190,15 +189,11 @@ fun saveAllDocuments() = FileDocumentManager.getInstance().saveAllDocuments()
  * This function saves all documents "as they are" (see [FileDocumentManager.saveDocumentAsIs]), but also fires that
  * these documents should be stripped later (when [saveAllDocuments] is called).
  */
-fun saveAllDocumentsAsTheyAre(reformatLater: Boolean = true) {
+fun saveAllDocumentsAsTheyAre() {
     val documentManager = FileDocumentManager.getInstance()
-    val rustfmtWatcher = RustfmtWatcher.getInstance()
-    rustfmtWatcher.withoutReformatting {
-        for (document in documentManager.unsavedDocuments) {
-            documentManager.saveDocumentAsIs(document)
-            documentManager.stripDocumentLater(document)
-            if (reformatLater) rustfmtWatcher.reformatDocumentLater(document)
-        }
+    for (document in documentManager.unsavedDocuments) {
+        documentManager.saveDocumentAsIs(document)
+        documentManager.stripDocumentLater(document)
     }
 }
 

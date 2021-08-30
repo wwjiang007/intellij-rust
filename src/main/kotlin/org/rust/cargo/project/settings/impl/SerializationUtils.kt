@@ -8,13 +8,15 @@
 
 package org.rust.cargo.project.settings.impl
 
+import com.intellij.ide.util.PropertiesComponent
+import com.intellij.openapi.project.Project
 import com.intellij.util.addOptionTag
 import com.intellij.util.xmlb.Constants
 import org.jdom.Element
 import org.rust.cargo.project.settings.RustProjectSettingsService.MacroExpansionEngine
 
 // Bump this number if Rust project settings changes
-const val XML_FORMAT_VERSION: Int = 2
+const val XML_FORMAT_VERSION: Int = 3
 
 const val VERSION: String = "version"
 const val TOOLCHAIN_HOME_DIRECTORY: String = "toolchainHomeDirectory"
@@ -36,12 +38,18 @@ const val USE_CARGO_CHECK_ANNOTATOR: String = "useCargoCheckAnnotator"
 const val CARGO_CHECK_ARGUMENTS: String = "cargoCheckArguments"
 const val EXPAND_MACROS: String = "expandMacros"
 
-fun Element.updateToCurrentVersion() {
+fun Element.updateToCurrentVersion(project: Project) {
     updateToVersionIfNeeded(2) {
         renameOption(USE_CARGO_CHECK_ANNOTATOR, RUN_EXTERNAL_LINTER_ON_THE_FLY)
         renameOption(CARGO_CHECK_ARGUMENTS, EXTERNAL_LINTER_ARGUMENTS)
         if (getOptionValueAsBoolean(EXPAND_MACROS) == false) {
             setOptionValue(MACRO_EXPANSION_ENGINE, MacroExpansionEngine.DISABLED)
+        }
+
+    }
+    updateToVersionIfNeeded(3) {
+        if (getOptionValueAsBoolean(RUN_RUSTFMT_ON_SAVE) == true) {
+            PropertiesComponent.getInstance(project).setValue("format.on.save", true)
         }
     }
     check(version == XML_FORMAT_VERSION)

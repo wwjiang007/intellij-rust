@@ -5,6 +5,7 @@
 
 package org.rust.cargo.project
 
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.testFramework.LightPlatformTestCase
 import org.intellij.lang.annotations.Language
 import org.rust.cargo.project.settings.RustProjectSettingsService.MacroExpansionEngine
@@ -32,11 +33,10 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
               <option name="externalLinterArguments" value="--no-default-features" />
               <option name="macroExpansionEngine" value="DISABLED" />
               <option name="runExternalLinterOnTheFly" value="true" />
-              <option name="runRustfmtOnSave" value="true" />
               <option name="toolchainHomeDirectory" value="/" />
               <option name="useOffline" value="true" />
               <option name="useRustfmt" value="true" />
-              <option name="version" value="2" />
+              <option name="version" value="3" />
             </RustProjectSettings>
         """.trimIndent()
         service.loadState(elementFromXmlString(text))
@@ -56,10 +56,9 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
         assertEquals(MacroExpansionEngine.DISABLED, service.macroExpansionEngine)
         assertEquals(false, service.doctestInjectionEnabled)
         assertEquals(true, service.useRustfmt)
-        assertEquals(true, service.runRustfmtOnSave)
     }
 
-    fun `test update from version 1`() {
+    fun `test update`() {
         val service = RustProjectSettingsServiceImpl(project)
 
         @Language("XML")
@@ -69,6 +68,7 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
               <option name="compileAllTargets" value="false" />
               <option name="useCargoCheckAnnotator" value="true" />
               <option name="expandMacros" value="false" />
+              <option name="runRustfmtOnSave" value="true" />
             </RustProjectSettings>
         """.trimIndent()
         service.loadState(elementFromXmlString(text))
@@ -79,7 +79,7 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
               <option name="compileAllTargets" value="false" />
               <option name="macroExpansionEngine" value="DISABLED" />
               <option name="runExternalLinterOnTheFly" value="true" />
-              <option name="version" value="2" />
+              <option name="version" value="3" />
             </RustProjectSettings>
         """.trimIndent()
         val actual = service.state.toXmlString()
@@ -88,5 +88,6 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
         assertEquals(true, service.runExternalLinterOnTheFly)
         assertEquals("", service.externalLinterArguments)
         assertEquals(MacroExpansionEngine.DISABLED, service.macroExpansionEngine)
+        assertEquals(true, PropertiesComponent.getInstance(project).getBoolean("format.on.save"))
     }
 }
