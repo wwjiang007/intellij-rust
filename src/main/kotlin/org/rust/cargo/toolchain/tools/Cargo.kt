@@ -376,6 +376,8 @@ class Cargo(toolchain: RsToolchainBase, useWrapper: Boolean = false)
             val parameters = buildList<String> {
                 if (channel != RustChannel.DEFAULT) {
                     add("+$channel")
+                } else if (toolchain != null) {
+                    add(toolchain)
                 }
                 if (project.rustSettings.useOffline) {
                     val cargoProject = findCargoProject(project, additionalArguments, workingDirectory)
@@ -387,8 +389,8 @@ class Cargo(toolchain: RsToolchainBase, useWrapper: Boolean = false)
                 add(command)
                 addAll(additionalArguments)
             }
-            val rustcExecutable = toolchain.rustc().executable.toString()
-            toolchain.createGeneralCommandLine(
+            val rustcExecutable = this@Cargo.toolchain.rustc().executable.toString()
+            this@Cargo.toolchain.createGeneralCommandLine(
                 executable,
                 workingDirectory,
                 redirectInputFrom,
