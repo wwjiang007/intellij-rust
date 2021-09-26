@@ -15,15 +15,14 @@ import org.rust.cargo.runconfig.buildtool.CargoBuildManager.isBuildConfiguration
 import org.rust.cargo.runconfig.buildtool.CargoBuildManager.isBuildToolWindowEnabled
 import org.rust.cargo.runconfig.command.CargoCommandConfiguration
 
-open class CargoCommandRunner : RsDefaultProgramRunnerBase() {
+class CargoCommandRunner : RsDefaultProgramRunnerBase() {
     override fun getRunnerId(): String = RUNNER_ID
 
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
         if (executorId != DefaultRunExecutor.EXECUTOR_ID || profile !is CargoCommandConfiguration) return false
         val cleaned = profile.clean().ok ?: return false
-        return profile.isBuildToolWindowEnabled ||
-            cleaned.cmd.command != "test" ||
-            getBuildConfiguration(profile) == null
+        return (profile.defaultTargetName == null || profile.buildOnRemoteTarget) &&
+            (profile.isBuildToolWindowEnabled || cleaned.cmd.command != "test" || getBuildConfiguration(profile) == null)
     }
 
     override fun doExecute(state: RunProfileState, environment: ExecutionEnvironment): RunContentDescriptor? {

@@ -45,7 +45,9 @@ class GrcovRunner : RsDefaultProgramRunnerBase() {
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
         if (executorId != CoverageExecutor.EXECUTOR_ID || profile !is CargoCommandConfiguration ||
             profile.clean() !is CargoCommandConfiguration.CleanConfiguration.Ok) return false
-        return !isBuildConfiguration(profile) && getBuildConfiguration(profile) != null
+        return profile.defaultTargetName == null &&
+            !isBuildConfiguration(profile) &&
+            getBuildConfiguration(profile) != null
     }
 
     override fun createConfigurationData(settingsProvider: ConfigurationInfoProvider): RunnerSettings {

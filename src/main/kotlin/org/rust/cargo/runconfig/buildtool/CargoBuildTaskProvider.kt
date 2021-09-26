@@ -11,7 +11,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.util.Key
 import org.rust.cargo.runconfig.buildtool.CargoBuildManager.getBuildConfiguration
 import org.rust.cargo.runconfig.command.CargoCommandConfiguration
-import org.rust.cargo.toolchain.tools.Rustup
+import org.rust.cargo.toolchain.tools.Rustup.Companion.checkNeedInstallTarget
 
 class CargoBuildTaskProvider : RsBuildTaskProvider<CargoBuildTaskProvider.BuildTask>() {
     override fun getId(): Key<BuildTask> = ID
@@ -28,13 +28,20 @@ class CargoBuildTaskProvider : RsBuildTaskProvider<CargoBuildTaskProvider.BuildT
         if (configuration !is CargoCommandConfiguration) return false
         val buildConfiguration = getBuildConfiguration(configuration) ?: return true
 
-        val projectDirectory = configuration.workingDirectory ?: return false
+        val projectDirectory = buildConfiguration.workingDirectory ?: return false
 
-        val configArgs = configuration.command.split(' ')
-        val targetFlagIdx = configArgs.indexOf("--target")
-        val targetTriple = if (targetFlagIdx != -1) configArgs.getOrNull(targetFlagIdx + 1).orEmpty() else ""
+        val configArgs = buildConfiguration.command.split(' ')
+        val targetFlagIdx = configArgs.indexOfFirst { it.startsWith("--target") }
+        val targetFlag = if (targetFlagIdx != -1) configArgs[targetFlagIdx] else null
+        val targetTriple = when {
+            targetFlag == "--target" -> configArgs.getOrNull(targetFlagIdx + 1)
+            targetFlag?.startsWith("--target=") == true -> targetFlag.substringAfter("=")
+            else -> null
+        }
 
-        if (Rustup.checkNeedInstallTarget(configuration.project, projectDirectory, targetTriple)) return false
+        if (targetTriple != null && checkNeedInstallTarget(configuration.project, projectDirectory, targetTriple)) {
+            return false
+        }
 
         return doExecuteTask(buildConfiguration, environment)
     }

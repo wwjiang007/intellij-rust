@@ -63,7 +63,8 @@ class CargoBuildTaskRunner : ProjectTaskRunner() {
             return rejectedPromise(RsBundle.message("untrusted.project.notification.execution.error"))
         }
 
-        if (!project.isBuildToolWindowEnabled) {
+        val configuration = context.runConfiguration as? CargoCommandConfiguration
+        if (configuration?.defaultTargetName != null || !project.isBuildToolWindowEnabled) {
             invokeLater { project.buildProject() }
             return rejectedPromise()
         }

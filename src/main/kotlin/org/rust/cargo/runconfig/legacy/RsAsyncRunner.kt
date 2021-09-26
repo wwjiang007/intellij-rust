@@ -31,6 +31,7 @@ import org.rust.cargo.runconfig.buildtool.CargoBuildManager.getBuildConfiguratio
 import org.rust.cargo.runconfig.buildtool.CargoBuildManager.isBuildConfiguration
 import org.rust.cargo.runconfig.buildtool.CargoBuildManager.isBuildToolWindowEnabled
 import org.rust.cargo.runconfig.command.CargoCommandConfiguration
+import org.rust.cargo.runconfig.target.localBuildArgsForRemoteRun
 import org.rust.cargo.toolchain.CargoCommandLine
 import org.rust.cargo.toolchain.impl.CargoMetadata
 import org.rust.cargo.toolchain.impl.CompilerArtifactMessage
@@ -52,7 +53,8 @@ abstract class RsAsyncRunner(
     override fun canRun(executorId: String, profile: RunProfile): Boolean {
         if (executorId != this.executorId || profile !is CargoCommandConfiguration ||
             profile.clean() !is CargoCommandConfiguration.CleanConfiguration.Ok) return false
-        return !profile.isBuildToolWindowEnabled &&
+        return profile.defaultTargetName == null &&
+            !profile.isBuildToolWindowEnabled &&
             !isBuildConfiguration(profile) &&
             getBuildConfiguration(profile) != null
     }
@@ -64,13 +66,14 @@ abstract class RsAsyncRunner(
 
         val commandLine = state.prepareCommandLine(getCargoCommonPatch(environment.project))
         val (commandArguments, executableArguments) = parseArgs(commandLine.command, commandLine.additionalArguments)
+        val additionalBuildArgs = state.runConfiguration.localBuildArgsForRemoteRun
 
         val isTestRun = commandLine.command == "test"
         val cmdHasNoRun = "--no-run" in commandLine.additionalArguments
         val buildCommand = if (isTestRun) {
             if (cmdHasNoRun) commandLine else commandLine.prependArgument("--no-run")
         } else {
-            commandLine.copy(command = "build", additionalArguments = commandArguments)
+            commandLine.copy(command = "build", additionalArguments = commandArguments + additionalBuildArgs)
         }.copy(emulateTerminal = false, withSudo = false) // building does not require root privileges
 
         val getRunCommand = { executablePath: Path ->

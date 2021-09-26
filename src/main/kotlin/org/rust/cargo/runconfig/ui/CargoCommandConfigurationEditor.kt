@@ -7,6 +7,9 @@ package org.rust.cargo.runconfig.ui
 
 import com.intellij.execution.ExecutionBundle
 import com.intellij.execution.configuration.EnvironmentVariablesComponent
+import com.intellij.execution.impl.SingleConfigurationConfigurable
+import com.intellij.ide.DataManager
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
@@ -41,6 +44,7 @@ import javax.swing.JComponent
 
 class CargoCommandConfigurationEditor(project: Project)
     : RsCommandConfigurationEditor<CargoCommandConfiguration>(project) {
+    private var panel: JComponent? = null
 
     override val command = RsCommandLineEditor(
         project, CargoCommandCompletionProvider(project.cargoProjects) { currentWorkspace() }
@@ -101,6 +105,7 @@ class CargoCommandConfigurationEditor(project: Project)
         // https://github.com/intellij-rust/intellij-rust/issues/7320
         isEnabled = isFeatureEnabled(RsExperiments.BUILD_TOOL_WINDOW)
     }
+    private val buildOnRemoteTarget = CheckBox("Build on remote target", true)
 
     override fun resetEditorFrom(configuration: CargoCommandConfiguration) {
         super.resetEditorFrom(configuration)
@@ -110,6 +115,7 @@ class CargoCommandConfigurationEditor(project: Project)
         allFeatures.isSelected = configuration.allFeatures
         emulateTerminal.isSelected = configuration.emulateTerminal
         withSudo.isSelected = configuration.withSudo
+        buildOnRemoteTarget.isSelected = configuration.buildOnRemoteTarget
         backtraceMode.selectedIndex = configuration.backtrace.index
         environmentVariables.envData = configuration.env
 
@@ -123,6 +129,8 @@ class CargoCommandConfigurationEditor(project: Project)
 
         isRedirectInput.isSelected = configuration.isRedirectInput
         redirectInput.text = configuration.redirectInputPath ?: ""
+
+        hideUnsupportedFieldsIfNeeded()
     }
 
     @Throws(ConfigurationException::class)
@@ -136,6 +144,7 @@ class CargoCommandConfigurationEditor(project: Project)
         configuration.allFeatures = allFeatures.isSelected
         configuration.emulateTerminal = emulateTerminal.isSelected && !SystemInfo.isWindows
         configuration.withSudo = withSudo.isSelected
+        configuration.buildOnRemoteTarget = buildOnRemoteTarget.isSelected
         configuration.backtrace = BacktraceMode.fromIndex(backtraceMode.selectedIndex)
         configuration.env = environmentVariables.envData
 
@@ -147,6 +156,8 @@ class CargoCommandConfigurationEditor(project: Project)
 
         configuration.isRedirectInput = isRedirectInput.isSelected
         configuration.redirectInputPath = redirectInputPath
+
+        hideUnsupportedFieldsIfNeeded()
     }
 
     override fun createEditor(): JComponent = panel {
@@ -164,6 +175,7 @@ class CargoCommandConfigurationEditor(project: Project)
             row { emulateTerminal() }
         }
         row { withSudo() }
+        row { buildOnRemoteTarget() }
 
         row(environmentVariables.label) {
             environmentVariables(growX)
@@ -181,6 +193,13 @@ class CargoCommandConfigurationEditor(project: Project)
             }
         }
         labeledRow("Back&trace:", backtraceMode) { backtraceMode() }
+    }.also { panel = it }
+
+    private fun hideUnsupportedFieldsIfNeeded() {
+        if (!ApplicationManager.getApplication().isDispatchThread) return
+        val localTarget = DataManager.getInstance().getDataContext(panel)
+            .getData(SingleConfigurationConfigurable.RUN_ON_TARGET_NAME_KEY) == null
+        buildOnRemoteTarget.isVisible = !localTarget
     }
 
     private fun LayoutBuilder.labeledRow(labelText: String, component: JComponent, init: Row.() -> Unit) {
