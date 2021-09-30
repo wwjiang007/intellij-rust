@@ -3783,7 +3783,7 @@ class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
 
         use dep_proc_macro::repr;
 
-        #[repr/*caret*/(C)]
+        #[repr/*caret*/(<error descr="C attribute should be applied to struct, enum, or union [E0517]">C</error>)]
         type Foo = i32;
     """)
 
@@ -3801,7 +3801,7 @@ class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
 
         use dep_proc_macro::start;
 
-        #[start/*caret*/]
+        #[<error descr="Start attribute can be placed only on functions [E0132]">start/*caret*/</error>]
         type Foo = i32;
     """)
 
@@ -3819,7 +3819,7 @@ class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
 
         use dep_proc_macro::inline;
 
-        #[inline/*caret*/]
+        #[<error descr="Attribute should be applied to function or closure [E0518]">inline/*caret*/</error>]
         type Foo = i32;
     """)
 
@@ -3841,7 +3841,6 @@ class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
         type Foo = i32;
     """)
 
-    @UseOldResolve
     @ProjectDescriptor(WithDependencyRustProjectDescriptor::class)
     fun `test custom inline proc macro attr and disable cfg`() = checkByFileTree("""
     //- dep-proc-macro/lib.rs
@@ -3897,7 +3896,7 @@ class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
         fn foo() {
             use dep_proc_macro::inline;
 
-            #[inline/*caret*/]
+            #[<error descr="Attribute should be applied to function or closure [E0518]">inline/*caret*/</error>]
             struct Test(i32);
         }
     """)
