@@ -27,6 +27,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.search.GlobalSearchScopes
 import com.intellij.util.ArrayUtil
+import com.intellij.util.Consumer
 import com.intellij.util.ui.StatusText
 import com.jetbrains.cidr.cpp.CLionProfilingBundle
 import com.jetbrains.cidr.cpp.profiling.*
@@ -36,6 +37,7 @@ import com.jetbrains.cidr.lang.toolchains.CidrToolEnvironment
 import org.rust.cargo.runconfig.CargoCommandConfigurationExtension
 import org.rust.cargo.runconfig.ConfigurationExtensionContext
 import org.rust.cargo.runconfig.command.CargoCommandConfiguration
+import org.rust.cargo.toolchain.wsl.RsWslToolchain
 import org.rust.clion.valgrind.legacy.RsValgrindRunnerLegacy
 import org.rust.openapiext.isInternal
 import org.rust.openapiext.isUnitTestMode
@@ -50,7 +52,7 @@ class RsValgrindConfigurationExtension : CargoCommandConfigurationExtension() {
     override fun isEnabledFor(
         applicableConfiguration: CargoCommandConfiguration,
         runnerSettings: RunnerSettings?
-    ): Boolean = SystemInfo.isLinux || SystemInfo.isMac
+    ): Boolean = isEnabledFor(applicableConfiguration)
 
     override fun patchCommandLine(
         configuration: CargoCommandConfiguration,
@@ -59,8 +61,9 @@ class RsValgrindConfigurationExtension : CargoCommandConfigurationExtension() {
         context: ConfigurationExtensionContext
     ) {
         if (environment.runner.runnerId !in VALGRIND_RUNNER_IDS) return
+        val toolchain = configuration.clean().ok?.toolchain ?: return
 
-        val programPath = cmdLine.exePath
+        val programPath = toolchain.toLocalPath(cmdLine.exePath)
         val valgrindPath = ValgrindSettings.getInstance().valgrindPath
         if (!File(programPath).exists()) {
             throw ExecutionException("File not found: $programPath")
@@ -72,7 +75,7 @@ class RsValgrindConfigurationExtension : CargoCommandConfigurationExtension() {
         }
         try {
             val outputFile = FileUtil.createTempFile("valgrind", null, true)
-            val outputFilePath = outputFile.absolutePath
+            val outputFilePath = toolchain.toRemotePath(outputFile.absolutePath)
             cmdLine.exePath = valgrindPath
             // scheme of command line arguments
             // <valgrind-arguments> <program> <program-arguments>
@@ -80,6 +83,7 @@ class RsValgrindConfigurationExtension : CargoCommandConfigurationExtension() {
             val valgrindParameters = parametersBuilder.build(outputFilePath)
             valgrindParameters.add(programPath)
             cmdLine.parametersList.prependAll(*ArrayUtil.toStringArray(valgrindParameters))
+            toolchain.patchCommandLine(cmdLine)
             putUserData<File>(OUTPUT_FILE_PATH_KEY, outputFile, configuration, context)
         } catch (e: IOException) {
             throw ExecutionException(e)
@@ -122,6 +126,7 @@ class RsValgrindConfigurationExtension : CargoCommandConfigurationExtension() {
         context: ConfigurationExtensionContext
     ) {
         if (environment.runner.runnerId !in VALGRIND_RUNNER_IDS) return
+        val toolchain = configuration.clean().ok?.toolchain ?: return
 
         val outputFile = getUserData<File>(OUTPUT_FILE_PATH_KEY, configuration, context) ?: return
         val treeDataModel = getUserData<MemoryProfileTreeDataModel>(DATA_MODEL_KEY, configuration, context) ?: return
@@ -131,7 +136,14 @@ class RsValgrindConfigurationExtension : CargoCommandConfigurationExtension() {
             val outputFileConsumer = ValgrindOutputConsumer(valgrindHandler, null)
             val accumulator = MemoryProfileStringAccumulator()
             val compositeConsumer = MemoryProfileCompositeConsumer(outputFileConsumer, accumulator)
-            val fileReader = MemoryProfileFileReader(outputFile, compositeConsumer, ValgrindUtil.PROFILER_NAME)
+            val consumerReplacer = Consumer<String> { string ->
+                val replaced = string.replace(TAG_RE) {
+                    val (tag, value) = it.destructured
+                    "<$tag>${toolchain.toLocalPath(value)}</$tag>"
+                }
+                compositeConsumer.consume(replaced)
+            }
+            val fileReader = MemoryProfileFileReader(outputFile, consumerReplacer, ValgrindUtil.PROFILER_NAME)
             handler.addProcessListener(object : ProcessAdapter() {
                 override fun processTerminated(event: ProcessEvent) {
                     try {
@@ -213,5 +225,12 @@ class RsValgrindConfigurationExtension : CargoCommandConfigurationExtension() {
         val OUTPUT_PANEL_KEY = Key.create<MemoryProfileOutputPanel>("valgrind.output_panel_key")
 
         val STORE_DATA_IN_RUN_CONFIGURATION = Key.create<Boolean>("valgrind.store_data_in_run_configuration")
+
+        private val TAG_RE: Regex = "<(exe|obj|dir)>(.+)</\\1>".toRegex();
+
+        fun isEnabledFor(configuration: CargoCommandConfiguration): Boolean {
+            val toolchain = configuration.clean().ok?.toolchain
+            return SystemInfo.isLinux || SystemInfo.isMac || SystemInfo.isWindows && toolchain is RsWslToolchain
+        }
     }
 }
