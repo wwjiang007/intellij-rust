@@ -7,6 +7,7 @@ package org.rust.lang.core.resolve
 
 import org.intellij.lang.annotations.Language
 import org.rust.ExpandMacros
+import org.rust.UseOldResolve
 
 class RsIncludeMacroResolveTest : RsResolveTestBase() {
 
