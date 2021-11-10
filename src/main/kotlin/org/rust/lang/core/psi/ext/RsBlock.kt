@@ -19,8 +19,9 @@ val RsBlock.expandedStmtsAndTailExpr: Pair<List<RsExpandedElement>, RsExpr?>
             stmts.add(stmt)
             false
         }
-        val tailExpr = stmts.lastOrNull()
-            ?.let { it as? RsExpr }
+        val tailExprIndex = stmts.indexOfLast { it.existsAfterExpansion }
+        val tailExpr = stmts.getOrNull(tailExprIndex)
+            ?.let { if (it is RsExprStmt && it.semicolon == null) it.expr else it as? RsExpr }
             ?.takeIf { e ->
                 // If tail expr is expanded from a macro, we should check that this macro doesn't have
                 // semicolon (`foo!();`), otherwise it's not a tail expr but a regular statement
@@ -29,10 +30,10 @@ val RsBlock.expandedStmtsAndTailExpr: Pair<List<RsExpandedElement>, RsExpr?>
                     !bracesKind.needsSemicolon || it.semicolon == null
                 }
             }
-        return when (tailExpr) {
-            null -> stmts
-            else -> stmts.subList(0, stmts.size - 1)
-        } to tailExpr
+        if (tailExpr != null) {
+            stmts.removeAt(tailExprIndex)
+        }
+        return stmts to tailExpr
     }
 
 private val RsBlock.stmtsAndMacros: Sequence<RsElement>
