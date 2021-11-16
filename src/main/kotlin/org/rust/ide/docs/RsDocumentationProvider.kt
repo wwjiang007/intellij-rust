@@ -37,6 +37,7 @@ class RsDocumentationProvider : AbstractDocumentationProvider() {
         val buffer = StringBuilder()
         when (element) {
             is RsTypeParameter -> definition(buffer) { generateDoc(element, it) }
+            is RsConstParameter -> definition(buffer) { generateDoc(element, it) }
             is RsDocAndAttributeOwner -> generateDoc(element, buffer)
             is RsPatBinding -> definition(buffer) { generateDoc(element, it) }
             is RsPath -> generateDoc(element, buffer)
@@ -49,6 +50,7 @@ class RsDocumentationProvider : AbstractDocumentationProvider() {
         when (element) {
             is RsPatBinding -> generateDoc(element, this)
             is RsTypeParameter -> generateDoc(element, this)
+            is RsConstParameter -> generateDoc(element, this)
             is RsConstant -> this += element.presentationInfo?.quickDocumentationText
             is RsMod -> this += element.presentationInfo?.quickDocumentationText
             is RsItemElement,
@@ -105,6 +107,14 @@ class RsDocumentationProvider : AbstractDocumentationProvider() {
             typeBounds.joinToWithBuffer(buffer, " + ", ": ") { generateDocumentation(it) }
         }
         element.typeReference?.generateDocumentation(buffer, " = ")
+    }
+
+    private fun generateDoc(element: RsConstParameter, buffer: StringBuilder) {
+        val name = element.name ?: return
+        buffer += "const parameter "
+        buffer.b { it += name }
+        element.typeReference?.generateDocumentation(buffer, ": ")
+        element.expr?.generateDocumentation(buffer, " = ")
     }
 
     private fun generateDoc(element: RsPath, buffer: StringBuilder) {
@@ -435,7 +445,8 @@ private fun PsiElement.generateDocumentation(buffer: StringBuilder, prefix: Stri
             }
             (bound.lifetime ?: bound.traitRef)?.generateDocumentation(buffer)
         }
-        is RsTypeArgumentList -> (lifetimeList + typeReferenceList + assocTypeBindingList)
+        is RsTypeArgumentList -> (lifetimeList + typeReferenceList + exprList + assocTypeBindingList)
+            .sortedBy { it.startOffset }
             .joinToWithBuffer(buffer, ", ", "&lt;", "&gt;") { generateDocumentation(it) }
         is RsTypeParameterList -> genericParameterList
             .joinToWithBuffer(buffer, ", ", "&lt;", "&gt;") { generateDocumentation(it) }
