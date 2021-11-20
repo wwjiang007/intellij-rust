@@ -23,6 +23,7 @@ import org.rust.lang.core.types.regions.ReUnknown
 import org.rust.lang.core.types.regions.Region
 import org.rust.lang.core.types.ty.*
 import org.rust.lang.core.types.type
+import org.rust.lang.utils.evaluation.evaluate
 import org.rust.stdext.withPrevious
 
 private const val MAX_SHORT_TYPE_LEN = 50
@@ -40,7 +41,7 @@ fun Ty.render(
     includeTypeArguments: Boolean = true,
     includeLifetimeArguments: Boolean = false,
     useAliasNames: Boolean = true,
-    skipUnchangedDefaultTypeArguments: Boolean = true
+    skipUnchangedDefaultGenericArguments: Boolean = true
 ): String = TypeRenderer(
     context = context,
     unknown = unknown,
@@ -53,7 +54,7 @@ fun Ty.render(
     includeTypeArguments = includeTypeArguments,
     includeLifetimeArguments = includeLifetimeArguments,
     useAliasNames = useAliasNames,
-    skipUnchangedDefaultTypeArguments = skipUnchangedDefaultTypeArguments
+    skipUnchangedDefaultGenericArguments = skipUnchangedDefaultGenericArguments
 ).render(this, level)
 
 fun Ty.renderInsertionSafe(
@@ -63,7 +64,7 @@ fun Ty.renderInsertionSafe(
     includeTypeArguments: Boolean = true,
     includeLifetimeArguments: Boolean = false,
     useAliasNames: Boolean = true,
-    skipUnchangedDefaultTypeArguments: Boolean = true
+    skipUnchangedDefaultGenericArguments: Boolean = true
 ): String = TypeRenderer(
     context = context,
     unknown = "_",
@@ -76,7 +77,7 @@ fun Ty.renderInsertionSafe(
     includeTypeArguments = includeTypeArguments,
     includeLifetimeArguments = includeLifetimeArguments,
     useAliasNames = useAliasNames,
-    skipUnchangedDefaultTypeArguments = skipUnchangedDefaultTypeArguments
+    skipUnchangedDefaultGenericArguments = skipUnchangedDefaultGenericArguments
 ).render(this, level)
 
 val Ty.shortPresentableText: String
@@ -99,7 +100,7 @@ private data class TypeRenderer(
     val includeTypeArguments: Boolean,
     val includeLifetimeArguments: Boolean,
     val useAliasNames: Boolean,
-    val skipUnchangedDefaultTypeArguments: Boolean
+    val skipUnchangedDefaultGenericArguments: Boolean
 ) {
     fun render(ty: Ty, level: Int): String {
         require(level >= 0)
@@ -271,13 +272,15 @@ private data class TypeRenderer(
         val renderedList = mutableListOf<String>()
         var nonDefaultParamFound = false
         for (parameter in declaration.genericParameters.asReversed()) {
-            if (skipUnchangedDefaultTypeArguments && !nonDefaultParamFound) {
-                if (parameter is RsTypeParameter &&
-                    parameter.typeReference != null &&
-                    parameter.typeReference?.type?.isEquivalentTo(subst[parameter]) == true) {
-                    continue
-                } else {
-                    nonDefaultParamFound = true
+            if (skipUnchangedDefaultGenericArguments && !nonDefaultParamFound) {
+                when {
+                    parameter is RsTypeParameter &&
+                        parameter.typeReference != null &&
+                        parameter.typeReference?.type?.isEquivalentTo(subst[parameter]) == true -> continue
+                    parameter is RsConstParameter &&
+                        parameter.expr != null &&
+                        parameter.expr?.evaluate(parameter.typeReference?.type ?: TyUnknown) == subst[parameter] -> continue
+                    else  -> nonDefaultParamFound = true
                 }
             }
 

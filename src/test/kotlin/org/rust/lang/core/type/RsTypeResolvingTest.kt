@@ -542,9 +542,9 @@ class RsTypeResolvingTest : RsTypificationTestBase() {
 
         val ty = typeAtCaret.type
         val renderedTy = when (renderMode) {
-            DEFAULT -> ty.render(useAliasNames = false, skipUnchangedDefaultTypeArguments = false)
-            WITH_LIFETIMES -> ty.renderInsertionSafe(includeLifetimeArguments = true, skipUnchangedDefaultTypeArguments = false)
-            WITH_ALIAS_NAMES -> ty.render(useAliasNames = true, skipUnchangedDefaultTypeArguments = false)
+            DEFAULT -> ty.render(useAliasNames = false, skipUnchangedDefaultGenericArguments = false)
+            WITH_LIFETIMES -> ty.renderInsertionSafe(includeLifetimeArguments = true, skipUnchangedDefaultGenericArguments = false)
+            WITH_ALIAS_NAMES -> ty.render(useAliasNames = true, skipUnchangedDefaultGenericArguments = false)
         }
         check(renderedTy == expectedType) {
             "$renderedTy != $expectedType"
