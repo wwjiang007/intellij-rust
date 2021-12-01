@@ -29,6 +29,8 @@ object RsExperiments {
 
     @EnabledInStable
     const val WSL_TOOLCHAIN = "org.rust.wsl"
+
+    const val SOURCE_BASED_COVERAGE: String = "org.rust.coverage.source"
 }
 
 /**

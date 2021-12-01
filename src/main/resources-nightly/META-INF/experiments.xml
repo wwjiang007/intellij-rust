@@ -21,5 +21,8 @@
         <experimentalFeature id="org.rust.crates.local.index" percentOfUsers="100">
             <description>Enables crates local index</description>
         </experimentalFeature>
+        <experimentalFeature id="org.rust.coverage.source" percentOfUsers="100">
+            <description>Use source-based coverage</description>
+        </experimentalFeature>
     </extensions>
 </idea-plugin>

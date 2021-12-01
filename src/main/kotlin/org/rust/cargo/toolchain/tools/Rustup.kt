@@ -149,6 +149,9 @@ class Rustup(toolchain: RsToolchainBase, private val projectDirectory: Path) : R
         fun checkNeedInstallRustfmt(project: Project, cargoProjectDirectory: Path): Boolean =
             checkNeedInstallComponent(project, cargoProjectDirectory, "rustfmt")
 
+        fun checkNeedInstallLlvmTools(project: Project, cargoProjectDirectory: Path): Boolean =
+            checkNeedInstallComponent(project, cargoProjectDirectory, "llvm-tools-preview", "llvm-tools")
+
         fun checkNeedInstallWasmTarget(project: Project, cargoProjectDirectory: Path): Boolean =
             checkNeedInstallTarget(project, cargoProjectDirectory, WASM_TARGET)
 
@@ -159,14 +162,15 @@ class Rustup(toolchain: RsToolchainBase, private val projectDirectory: Path) : R
         private fun checkNeedInstallComponent(
             project: Project,
             cargoProjectDirectory: Path,
-            componentName: String
+            componentName: String,
+            componentPresentableName: String = componentName.capitalize()
         ): Boolean {
             val rustup = project.toolchain?.rustup(cargoProjectDirectory) ?: return false
             val needInstall = rustup.needInstallComponent(componentName)
 
             if (needInstall) {
                 project.showBalloon(
-                    "${componentName.capitalize()} is not installed",
+                    "$componentPresentableName is not installed",
                     NotificationType.ERROR,
                     InstallComponentAction(cargoProjectDirectory, componentName)
                 )
