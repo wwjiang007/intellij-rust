@@ -45,6 +45,7 @@ import org.rust.cargo.project.model.cargoProjects
 import org.rust.cargo.project.settings.RustProjectSettingsService
 import org.rust.cargo.project.settings.rustSettings
 import org.rust.cargo.project.workspace.PackageOrigin
+import org.rust.lang.core.ResolveAndMacrosCommonThreadPool
 import org.rust.lang.core.macros.errors.ExpansionPipelineError
 import org.rust.lang.core.macros.errors.GetMacroExpansionError
 import org.rust.lang.core.macros.errors.MacroExpansionAndParsingError
@@ -455,7 +456,7 @@ private class MacroExpansionServiceImplInner(
      * In short, use of [ForkJoinPool.commonPool] in this place leads to crashes.
      * See [issue](https://github.com/intellij-rust/intellij-rust/issues/3966)
      */
-    private val pool: ExecutorService = Executors.newWorkStealingPool()
+    private val pool: ExecutorService = ResolveAndMacrosCommonThreadPool.get()
 
     private val stepModificationTracker: SimpleModificationTracker = SimpleModificationTracker()
 
@@ -1044,9 +1045,6 @@ private class MacroExpansionServiceImplInner(
         } else {
             dirs.dataFile.delete()
         }
-
-        pool.shutdownNow()
-        pool.awaitTermination(5, TimeUnit.SECONDS)
 
         releaseExpansionDirectory()
     }

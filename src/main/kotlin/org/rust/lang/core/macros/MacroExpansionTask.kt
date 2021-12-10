@@ -80,7 +80,7 @@ abstract class MacroExpansionTaskBase(
 
         try {
             realTaskIndicator.text = "Preparing resolve data"
-            updateDefMapForAllCrates(project, pool, subTaskIndicator)
+            updateDefMapForAllCrates(project, subTaskIndicator)
         } catch (e: ProcessCanceledException) {
             throw e
         } catch (e: Exception) {
