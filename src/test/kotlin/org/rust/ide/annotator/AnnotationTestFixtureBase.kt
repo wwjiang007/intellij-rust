@@ -105,7 +105,7 @@ abstract class AnnotationTestFixtureBase(
     ) = checkFix(fixName, before, after,
         configure = this::configureByText,
         checkBefore = { codeInsightFixture.checkHighlighting(checkWarn, checkInfo, checkWeakWarn) },
-        checkAfter = this::checkByText,
+        checkAfter = this::checkResultText,
         testmark = testmark)
 
     fun checkFixIsUnavailable(
@@ -148,7 +148,7 @@ abstract class AnnotationTestFixtureBase(
     ) = checkFix(fixName, before, after,
         configure = this::configureByText,
         checkBefore = {},
-        checkAfter = this::checkByText,
+        checkAfter = this::checkResultText,
         testmark = testmark)
 
     protected open fun <T> check(
@@ -185,7 +185,7 @@ abstract class AnnotationTestFixtureBase(
         testmark?.checkHit(action) ?: action()
     }
 
-    private fun checkByText(text: String) {
+    fun checkResultText(text: String) {
         codeInsightFixture.checkResult(replaceCaretMarker(text.trimIndent()))
     }
 
