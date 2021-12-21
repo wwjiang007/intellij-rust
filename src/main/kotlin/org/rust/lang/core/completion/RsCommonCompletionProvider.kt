@@ -68,6 +68,10 @@ object RsCommonCompletionProvider : RsCompletionProvider() {
         if (context.isSimplePath && RsCodeInsightSettings.getInstance().suggestOutOfScopeItems) {
             addCompletionsForOutOfScopeItems(parameters, result, processedPathElements, context.expectedTy)
         }
+
+        if (element is RsPath && processedPathElements.isEmpty && RsCodeInsightSettings.getInstance().suggestOutOfScopeItems) {
+            addCompletionsForOutOfScopeFirstPathSegment(element, result, context)
+        }
     }
 
     @VisibleForTesting
@@ -78,16 +82,17 @@ object RsCommonCompletionProvider : RsCompletionProvider() {
         processedPathNames: MultiMap<String, RsElement>
     ) {
         collectCompletionVariants(result, context) {
+            val processor = filterNotCfgDisabledItemsAndTestFunctions(it)
             when (element) {
-                is RsAssocTypeBinding -> processAssocTypeVariants(element, it)
-                is RsExternCrateItem -> processExternCrateResolveVariants(element, true, it)
-                is RsLabel -> processLabelResolveVariants(element, it)
-                is RsLifetime -> processLifetimeResolveVariants(element, it)
-                is RsMacroReference -> processMacroReferenceVariants(element, it)
-                is RsModDeclItem -> processModDeclResolveVariants(element, it)
-                is RsPatBinding -> processPatBindingResolveVariants(element, true, it)
-                is RsStructLiteralField -> processStructLiteralFieldResolveVariants(element, true, it)
-                is RsPath -> processPathVariants(element, processedPathNames, it)
+                is RsAssocTypeBinding -> processAssocTypeVariants(element, processor)
+                is RsExternCrateItem -> processExternCrateResolveVariants(element, true, processor)
+                is RsLabel -> processLabelResolveVariants(element, processor)
+                is RsLifetime -> processLifetimeResolveVariants(element, processor)
+                is RsMacroReference -> processMacroReferenceVariants(element, processor)
+                is RsModDeclItem -> processModDeclResolveVariants(element, processor)
+                is RsPatBinding -> processPatBindingResolveVariants(element, true, processor)
+                is RsStructLiteralField -> processStructLiteralFieldResolveVariants(element, true, processor)
+                is RsPath -> processPathVariants(element, processedPathNames, processor)
             }
         }
     }
@@ -228,27 +233,69 @@ object RsCommonCompletionProvider : RsCompletionProvider() {
                 result.addAllElements(variants)
             }
 
-            val lookupElement = createLookupElement(
-                scopeEntry = scopeEntry,
-                context = context,
-                locationString = candidate.info.usePath,
-                insertHandler = object : RsDefaultInsertHandler() {
-                    override fun handleInsert(
-                        element: RsElement,
-                        scopeName: String,
-                        context: InsertionContext,
-                        item: LookupElement
-                    ) {
-                        super.handleInsert(element, scopeName, context, item)
-                        if (RsCodeInsightSettings.getInstance().importOutOfScopeItems) {
-                            context.commitDocument()
-                            context.getElementOfType<RsElement>()?.let { candidate.import(it) }
-                        }
-                    }
-                }
-            ).withImportCandidate(candidate)
+            val lookupElement = createLookupElementWithImportCandidate(scopeEntry, context, candidate)
             result.addElement(lookupElement)
         }
+    }
+
+    /** Adds completions for the case `HashMap::/*caret*/` where `HashMap` is not imported. */
+    private fun addCompletionsForOutOfScopeFirstPathSegment(path: RsPath, result: CompletionResultSet, context: RsCompletionContext) {
+        val qualifier = path.path
+        if (qualifier != null && qualifier.path == null && qualifier.typeQual == null && !qualifier.hasColonColon
+            && qualifier.resolveStatus == PathResolveStatus.UNRESOLVED) {
+            val importContext = ImportContext2.from(qualifier, ImportContext2.Type.AUTO_IMPORT) ?: return
+            val itemToCandidates = ImportCandidatesCollector2.getImportCandidates(importContext, qualifier.referenceName!!)
+                .groupBy { it.qualifiedNamedItem.item }
+            for ((_, candidates) in itemToCandidates) {
+                // Here all use path resolves to the same item, so we can just use the first of them
+                val firstUsePath = candidates.first().info.usePath
+
+                val newPath = RsCodeFragmentFactory(path.project).createPathInTmpMod(
+                    path.text,
+                    importContext.rootMod,
+                    importContext.pathInfo!!.pathParsingMode,
+                    path.allowedNamespaces(isCompletion = true),
+                    firstUsePath,
+                    null
+                )
+
+                if (newPath != null) {
+                    val processor = filterNotCfgDisabledItemsAndTestFunctions(createProcessor { e ->
+                        for (candidate in candidates) {
+                            result.addElement(createLookupElementWithImportCandidate(e, context, candidate))
+                        }
+                        false
+                    })
+                    processPathVariants(newPath, MultiMap<String, RsElement>(), processor)
+                }
+            }
+        }
+    }
+
+    private fun createLookupElementWithImportCandidate(
+        scopeEntry: ScopeEntry,
+        context: RsCompletionContext,
+        candidate: ImportCandidateBase
+    ): RsImportLookupElement {
+        return createLookupElement(
+            scopeEntry = scopeEntry,
+            context = context,
+            locationString = candidate.info.usePath,
+            insertHandler = object : RsDefaultInsertHandler() {
+                override fun handleInsert(
+                    element: RsElement,
+                    scopeName: String,
+                    context: InsertionContext,
+                    item: LookupElement
+                ) {
+                    super.handleInsert(element, scopeName, context, item)
+                    if (RsCodeInsightSettings.getInstance().importOutOfScopeItems) {
+                        context.commitDocument()
+                        context.getElementOfType<RsElement>()?.let { candidate.import(it) }
+                    }
+                }
+            }
+        ).withImportCandidate(candidate)
     }
 
     private fun isInSameRustMod(element1: PsiElement, element2: PsiElement): Boolean =

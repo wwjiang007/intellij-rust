@@ -66,7 +66,7 @@ class ImportContext2 private constructor(
 
     companion object {
         fun from(path: RsPath, type: Type = Type.AUTO_IMPORT): ImportContext2? =
-            from(path, type, PathInfo.from(path, type == Type.COMPLETION))
+            from(path, type, PathInfo.from  (path, type == Type.COMPLETION))
 
         fun from(context: RsElement, type: Type = Type.AUTO_IMPORT, pathInfo: PathInfo? = null): ImportContext2? {
             val rootMod = context.containingMod
