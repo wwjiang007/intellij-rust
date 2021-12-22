@@ -61,8 +61,6 @@ class RustProjectSettingsServiceImpl(
     override val useOffline: Boolean get() = _state.useOffline
     override val macroExpansionEngine: MacroExpansionEngine get() = _state.macroExpansionEngine
     override val doctestInjectionEnabled: Boolean get() = _state.doctestInjectionEnabled
-    override val useRustfmt: Boolean get() = _state.useRustfmt
-    override val runRustfmtOnSave: Boolean get() = _state.runRustfmtOnSave
 
     @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override fun getToolchain(): RsToolchain? = _state.toolchain?.let(RsToolchain::from)
@@ -75,7 +73,7 @@ class RustProjectSettingsServiceImpl(
 
     override fun loadState(element: Element) {
         val rawState = element.clone()
-        rawState.updateToCurrentVersion()
+        rawState.updateRustSettingsToCurrentVersion()
         deserializeInto(_state, rawState)
     }
 

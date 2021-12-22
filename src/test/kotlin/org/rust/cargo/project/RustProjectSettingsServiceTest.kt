@@ -11,7 +11,7 @@ import org.junit.internal.runners.JUnit38ClassRunner
 import org.junit.runner.RunWith
 import org.rust.cargo.project.settings.RustProjectSettingsService.MacroExpansionEngine
 import org.rust.cargo.project.settings.impl.RustProjectSettingsServiceImpl
-import org.rust.cargo.project.settings.impl.XML_FORMAT_VERSION
+import org.rust.cargo.project.settings.impl.RUST_XML_FORMAT_VERSION
 import org.rust.cargo.toolchain.ExternalLinter
 import org.rust.cargo.toolchain.RsLocalToolchain
 import org.rust.openapiext.elementFromXmlString
@@ -35,10 +35,8 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
               <option name="externalLinterArguments" value="--no-default-features" />
               <option name="macroExpansionEngine" value="DISABLED" />
               <option name="runExternalLinterOnTheFly" value="true" />
-              <option name="runRustfmtOnSave" value="true" />
               <option name="toolchainHomeDirectory" value="/" />
               <option name="useOffline" value="true" />
-              <option name="useRustfmt" value="true" />
               <option name="version" value="2" />
             </RustProjectSettings>
         """.trimIndent()
@@ -47,7 +45,7 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
         val actual = service.state.toXmlString()
         assertEquals(text, actual)
 
-        assertEquals(XML_FORMAT_VERSION, service.version)
+        assertEquals(RUST_XML_FORMAT_VERSION, service.version)
         assertEquals(RsLocalToolchain(Paths.get("/")), service.toolchain)
         assertEquals(false, service.autoUpdateEnabled)
         assertEquals(ExternalLinter.CLIPPY, service.externalLinter)
@@ -58,8 +56,6 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
         assertEquals(true, service.useOffline)
         assertEquals(MacroExpansionEngine.DISABLED, service.macroExpansionEngine)
         assertEquals(false, service.doctestInjectionEnabled)
-        assertEquals(true, service.useRustfmt)
-        assertEquals(true, service.runRustfmtOnSave)
     }
 
     fun `test update from version 1`() {

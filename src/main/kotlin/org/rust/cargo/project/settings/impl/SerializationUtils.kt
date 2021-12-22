@@ -14,7 +14,7 @@ import org.jdom.Element
 import org.rust.cargo.project.settings.RustProjectSettingsService.MacroExpansionEngine
 
 // Bump this number if Rust project settings changes
-const val XML_FORMAT_VERSION: Int = 2
+const val RUST_XML_FORMAT_VERSION: Int = 2
 
 const val VERSION: String = "version"
 const val TOOLCHAIN_HOME_DIRECTORY: String = "toolchainHomeDirectory"
@@ -36,7 +36,7 @@ const val USE_CARGO_CHECK_ANNOTATOR: String = "useCargoCheckAnnotator"
 const val CARGO_CHECK_ARGUMENTS: String = "cargoCheckArguments"
 const val EXPAND_MACROS: String = "expandMacros"
 
-fun Element.updateToCurrentVersion() {
+fun Element.updateRustSettingsToCurrentVersion() {
     updateToVersionIfNeeded(2) {
         renameOption(USE_CARGO_CHECK_ANNOTATOR, RUN_EXTERNAL_LINTER_ON_THE_FLY)
         renameOption(CARGO_CHECK_ARGUMENTS, EXTERNAL_LINTER_ARGUMENTS)
@@ -44,7 +44,7 @@ fun Element.updateToCurrentVersion() {
             setOptionValue(MACRO_EXPANSION_ENGINE, MacroExpansionEngine.DISABLED)
         }
     }
-    check(version == XML_FORMAT_VERSION)
+    check(version == RUST_XML_FORMAT_VERSION)
 }
 
 private fun Element.updateToVersionIfNeeded(newVersion: Int, update: Element.() -> Unit) {
