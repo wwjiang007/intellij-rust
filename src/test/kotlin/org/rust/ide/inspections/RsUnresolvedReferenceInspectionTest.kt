@@ -263,6 +263,20 @@ class RsUnresolvedReferenceInspectionTest : RsInspectionsTestBase(RsUnresolvedRe
         fn qux() { }
     """, false)
 
+    @MockAdditionalCfgOptions("intellij_rust")
+    fun `test no errors in cfg-disabled file`() = checkByFileTree("""
+    //- main.rs
+        #[cfg(not(intellij_rust))]
+        mod foo;
+        #[cfg(not(intellij_rust))]
+        struct MyStruct;
+    //- foo.rs
+        use crate::MyStruct;
+        macro_rules! foo {() => {};}
+        foo!();/*caret*/
+        fn foo(a: MyStruct) {}
+    """, false)
+
     private fun checkByText(@Language("Rust") text: String, ignoreWithoutQuickFix: Boolean) {
         withIgnoreWithoutQuickFix(ignoreWithoutQuickFix) { checkByText(text) }
     }
